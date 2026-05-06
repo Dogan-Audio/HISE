@@ -229,6 +229,7 @@ public:
 		onController,
 		onTimer,
 		onControl,
+		onChannelsConfigured,
 		numCallbacks
 	};
 

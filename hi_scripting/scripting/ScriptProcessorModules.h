@@ -91,6 +91,7 @@ public:
 		onControllerOpen,
 		onTimerOpen,
 		onControlOpen,
+		onChannelsConfiguredOpen,
 		externalPopupShown,
 		numScriptEditorStates
 	};
@@ -124,6 +125,8 @@ public:
 	bool isDeferred() const;;
 
 	void timerCallback() override;
+	void postCompileCallback() override;
+	void prepareToPlay(double sampleRate, int samplesPerBlock) override;
 
 	void processHiseEvent(HiseEvent &m) override;
 
@@ -155,7 +158,7 @@ private:
 
 	DeferredExecutioner deferredExecutioner;
 
-
+	void callOnChannelsConfigured(int numInputs, int numOutputs);
 	void runTimerCallback(int offsetInBuffer = -1);
 	void runScriptCallbacks();
 
@@ -165,6 +168,7 @@ private:
 	ScopedPointer<SnippetDocument> onControllerCallback;
 	ScopedPointer<SnippetDocument> onControlCallback;
 	ScopedPointer<SnippetDocument> onTimerCallback;
+	ScopedPointer<SnippetDocument> onChannelsConfiguredCallback;
 
 	ReadWriteLock defferedMessageLock;
 
@@ -184,7 +188,9 @@ private:
 
 	bool front, deferred, deferredUpdatePending;
 
-	
+	friend class ScriptingApi::Engine;
+	int simulatedInputs = 2;
+	int simulatedOutputs = 2;
 
 	
 

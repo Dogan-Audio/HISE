@@ -2281,14 +2281,8 @@ bool JavascriptProcessor::parseSnippetsFromString(const String &x, bool clearUnd
 
 		if (!x.contains(filter))
 		{
-            if(MessageManager::getInstance()->isThisTheMessageThread())
-            {
-                PresetHandler::showMessageWindow("Invalid script", "The script you are trying to load is not a valid HISE script file.\nThe callback " + filter + " is not defined.", PresetHandler::IconType::Error);
-            }
-            
-            debugError(dynamic_cast<Processor*>(this), s->getCallbackName().toString() + " could not be parsed!");
-			
-			return false;
+			s->replaceContentAsync(s->getSnippetAsFunction(), !clearUndoHistory);
+    		continue;
 		}
 
 		String code = codeToCut.fromLastOccurrenceOf(filter, true, false);
@@ -2432,16 +2426,17 @@ notifier(*this)
 
 void JavascriptProcessor::SnippetDocument::checkIfScriptActive()
 {
-	isActive = true;
+    isActive = true;
     auto text = getSnippetAsFunction();
     
-	if (!text.containsNonWhitespaceChars()) isActive = false;
+    if (!text.containsNonWhitespaceChars()) isActive = false;
 
-	String trimmedText = text.removeCharacters(" \t\n\r");
+    if (callbackName == Identifier("onChannelsConfigured"))
+        return;
 
-	String trimmedEmptyText = emptyText.removeCharacters(" \t\n\r");
-
-	if (trimmedEmptyText == trimmedText)	isActive = false;
+    String trimmedText = text.removeCharacters(" \t\n\r");
+    String trimmedEmptyText = emptyText.removeCharacters(" \t\n\r");
+    if (trimmedEmptyText == trimmedText) isActive = false;
 }
 
 String JavascriptProcessor::SnippetDocument::getSnippetAsFunction() const

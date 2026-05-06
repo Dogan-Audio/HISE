@@ -3314,6 +3314,23 @@ int ScriptedControlAudioParameter::getNumSteps() const
 	return parentProcessor->getDefaultNumParameterSteps();
 }
 
+bool ScriptedControlAudioParameter::isDiscrete() const
+{
+	switch (type)
+	{
+	case ScriptedControlAudioParameter::ControlType::Button:
+		return true;
+	case ScriptedControlAudioParameter::ControlType::ComboBox:
+		return true;
+	case ScriptedControlAudioParameter::ControlType::Slider:
+		return false;
+	case ScriptedControlAudioParameter::ControlType::Panel:
+		return false;
+	default:
+		return false;
+	}
+}
+
 bool ScriptedControlAudioParameter::isMetaParameter() const
 {
     return isMeta;

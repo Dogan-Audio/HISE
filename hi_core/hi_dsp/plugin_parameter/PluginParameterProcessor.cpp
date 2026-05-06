@@ -648,35 +648,32 @@ AudioProcessor::BusesProperties PluginParameterAudioProcessor::getHiseBusPropert
 
 bool PluginParameterAudioProcessor::isBusesLayoutSupported(const BusesLayout& layouts) const
 {
-	auto inputs = layouts.getMainInputChannels();
-	auto outputs = layouts.getMainOutputChannels();
-
-	ignoreUnused(inputs, outputs);
-
-#if HISE_MIDIFX_PLUGIN
-		return inputs == 0 && outputs == 0;
-#endif
+    int inputs = layouts.getMainInputChannels();
+    int outputs = layouts.getMainOutputChannels();
 
 #if FRONTEND_IS_PLUGIN
-#if HI_SUPPORT_MONO_CHANNEL_LAYOUT
-#if HI_SUPPORT_MONO_TO_STEREO
-		if (outputs == 1) return false; // only mono to stereo support
-		return (outputs == 2) && (inputs == 1 || inputs == 2);
+    return (inputs == 2 && outputs == 2)
+    #if HI_SUPPORT_MONO_CHANNEL_LAYOUT
+        || (inputs == 1 && outputs == 1)
+    #endif
+    #if HI_SUPPORT_MONO_TO_STEREO
+        || (inputs == 1 && outputs == 2)
+    #endif
+    ;
 #else
-		return (inputs == 1 && outputs == 1) ||
-			   (inputs == 2 && outputs == 2);
-#endif
-#else
-		return inputs == 2 && outputs == 2;
-#endif
-#else
-    
 #if IS_STANDALONE_FRONTEND || IS_STANDALONE_APP
-    return outputs == 2 || outputs == HISE_NUM_STANDALONE_OUTPUTS;
+    return (inputs == 2 && outputs == 2)
+    #if HI_SUPPORT_MONO_CHANNEL_LAYOUT
+        || (inputs == 1 && outputs == 1)
+    #endif
+    #if HI_SUPPORT_MONO_TO_STEREO
+        || (inputs == 1 && outputs == 2)
+    #endif
+    ;
 #else
-	bool isStereo = (inputs == 2 || inputs == 0) && outputs == 2;
-	bool isMultiChannel = (inputs == HISE_NUM_PLUGIN_CHANNELS || inputs == 0) && (outputs == HISE_NUM_PLUGIN_CHANNELS);
-	return isStereo || isMultiChannel;
+    bool isStereo = (inputs == 2 || inputs == 0) && outputs == 2;
+    bool isMultiChannel = (inputs == HISE_NUM_PLUGIN_CHANNELS || inputs == 0) && (outputs == HISE_NUM_PLUGIN_CHANNELS);
+    return isStereo || isMultiChannel;
 #endif
 #endif
 }

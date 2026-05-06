@@ -353,7 +353,10 @@ public:
 
 		/** Returns the amount of output channels. */
 		int getNumPluginChannels() const;
-
+		
+		/** Simulates a channel layout for testing in the HISE editor. */
+		void simulateChannelLayout(int numInputs, int numOutputs);
+		
         /** Creates an FFT object. */
 		var createFFT();
 

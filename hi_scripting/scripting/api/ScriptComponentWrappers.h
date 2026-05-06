@@ -95,6 +95,8 @@ public:
 	float getValueForText(const String &text) const override;
 	int getNumSteps() const override;
 
+	bool isDiscrete() const override;
+	
 	//void setParameterNotifyingHost(int index, float newValue);
 	bool isAutomatable() const override { return true; };
 

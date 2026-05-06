@@ -30,6 +30,7 @@
 *
 *   ===========================================================================
 */
+#include "../../hi_core/hi_dsp/plugin_parameter/PluginParameterProcessor.h"
 
 namespace hise { using namespace juce;
 
@@ -1180,6 +1181,7 @@ struct ScriptingApi::Engine::Wrapper
 	API_METHOD_WRAPPER_0(Engine, getSampleRate);
 	API_METHOD_WRAPPER_0(Engine, getBufferSize);
 	API_METHOD_WRAPPER_0(Engine, getNumPluginChannels);
+	API_VOID_METHOD_WRAPPER_2(Engine, simulateChannelLayout);
 	API_METHOD_WRAPPER_1(Engine, setMinimumSampleRate);
 	API_VOID_METHOD_WRAPPER_1(Engine, setMaximumBlockSize);
 	API_METHOD_WRAPPER_1(Engine, getMidiNoteName);
@@ -1338,6 +1340,7 @@ parentMidiProcessor(dynamic_cast<ScriptBaseMidiProcessor*>(p))
 	ADD_API_METHOD_0(getSampleRate);
 	ADD_API_METHOD_0(getBufferSize);
 	ADD_API_METHOD_0(getNumPluginChannels);
+	ADD_API_METHOD_2(simulateChannelLayout);
 	ADD_TYPED_API_METHOD_1(setMinimumSampleRate, VarTypeChecker::Number);
 	ADD_TYPED_API_METHOD_1(setMaximumBlockSize, VarTypeChecker::Number);
 	ADD_API_METHOD_0(createThreadSafeStorage);
@@ -2163,7 +2166,25 @@ bool ScriptingApi::Engine::performUndoAction(var thisObject, var undoAction)
 
 int ScriptingApi::Engine::getNumPluginChannels() const
 {
-	return HISE_NUM_PLUGIN_CHANNELS;
+    if (auto* mc = getScriptProcessor()->getMainController_())
+    {
+        if (auto* ap = dynamic_cast<AudioProcessor*>(const_cast<MainController*>(mc)))
+            return ap->getTotalNumOutputChannels();
+    }
+    return HISE_NUM_PLUGIN_CHANNELS;
+}
+
+void ScriptingApi::Engine::simulateChannelLayout(int numInputs, int numOutputs)
+{
+#if USE_BACKEND
+    if (auto* jmp = dynamic_cast<JavascriptMidiProcessor*>(getScriptProcessor()))
+    {
+        jmp->simulatedInputs = numInputs;
+        jmp->simulatedOutputs = numOutputs;
+    }
+#else
+    ignoreUnused(numInputs, numOutputs);
+#endif
 }
 
 var ScriptingApi::Engine::createFixObjectFactory(var layoutData)

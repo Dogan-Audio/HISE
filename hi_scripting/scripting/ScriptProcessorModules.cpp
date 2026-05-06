@@ -41,25 +41,54 @@ onNoteOffCallback(new SnippetDocument("onNoteOff")),
 onControllerCallback(new SnippetDocument("onController")),
 onTimerCallback(new SnippetDocument("onTimer")),
 onControlCallback(new SnippetDocument("onControl", "number value")),
+onChannelsConfiguredCallback(new SnippetDocument("onChannelsConfigured", "numInputs numOutputs")),
 front(false),
 deferred(false),
 deferredExecutioner(this),
 deferredUpdatePending(false)
 {
-	initContent();
+    initContent();
 
     editorStateIdentifiers.add("contentShown");
-	editorStateIdentifiers.add("onInitOpen");
-	editorStateIdentifiers.add("onNoteOnOpen");
-	editorStateIdentifiers.add("onNoteOffOpen");
-	editorStateIdentifiers.add("onControllerOpen");
-	editorStateIdentifiers.add("onTimerOpen");
-	editorStateIdentifiers.add("onControlOpen");
-	
-	editorStateIdentifiers.add("externalPopupShown");
-    
+    editorStateIdentifiers.add("onInitOpen");
+    editorStateIdentifiers.add("onNoteOnOpen");
+    editorStateIdentifiers.add("onNoteOffOpen");
+    editorStateIdentifiers.add("onControllerOpen");
+    editorStateIdentifiers.add("onTimerOpen");
+    editorStateIdentifiers.add("onControlOpen");
+    editorStateIdentifiers.add("onChannelsConfiguredOpen");
+    editorStateIdentifiers.add("externalPopupShown");
+
     setEditorState(Identifier("contentShown"), true);
     setEditorState(Identifier("onInitOpen"), true);
+
+    onInitCallback->replaceAllContent(
+        "MakeInterface({\"UIWidth\": 600, \"UIHeight\": 400});\n"
+		"Engine.simulateChannelLayout(2, 2);\n"
+		"\n"
+    );
+
+    onChannelsConfiguredCallback->replaceAllContent(
+        "function onChannelsConfigured(numInputs, numOutputs)\n"
+        "{\n"
+        "\tif (numInputs == 1 && numOutputs == 1)\n"
+        "\t{\n"
+        "\t\t// Mono\n"
+        "\t}\n"
+        "\telse if (numInputs == 1 && numOutputs == 2)\n"
+        "\t{\n"
+        "\t\t// Mono -> Stereo\n"
+        "\t}\n"
+        "\telse if (numInputs == 2 && numOutputs == 2)\n"
+        "\t{\n"
+        "\t\t// Stereo\n"
+        "\t}\n"
+		"\telse\n"
+		"\t{\n"
+		"\t\t// Other\n"
+        "\t}\n"
+        "}\n"
+    );
 }
 
 
@@ -77,6 +106,7 @@ JavascriptMidiProcessor::~JavascriptMidiProcessor()
 	onControllerCallback = nullptr;
 	onTimerCallback = nullptr;
 	onControlCallback = nullptr;
+	onChannelsConfiguredCallback = nullptr;
 
 #if USE_BACKEND
 	if (consoleEnabled)
@@ -180,6 +210,7 @@ JavascriptMidiProcessor::SnippetDocument * JavascriptMidiProcessor::getSnippet(i
 	case onController:	return onControllerCallback;
 	case onTimer:		return onTimerCallback;
 	case onControl:		return onControlCallback;
+	case onChannelsConfigured:  return onChannelsConfiguredCallback;
 	default:			jassertfalse; return nullptr;
 	}
 }
@@ -194,6 +225,7 @@ const JavascriptMidiProcessor::SnippetDocument * JavascriptMidiProcessor::getSni
 	case onController:	return onControllerCallback;
 	case onTimer:		return onTimerCallback;
 	case onControl:		return onControlCallback;
+	case onChannelsConfigured:  return onChannelsConfiguredCallback;
 	default:			jassertfalse; return nullptr;
 	}
 }
@@ -286,6 +318,45 @@ JavascriptMidiProcessor* JavascriptMidiProcessor::getFirstInterfaceScriptProcess
 	}
 
 	return nullptr;
+}
+
+void JavascriptMidiProcessor::callOnChannelsConfigured(int numInputs, int numOutputs)
+{
+    if (scriptEngine == nullptr)
+        return;
+
+    if (onChannelsConfiguredCallback->isSnippetEmpty())
+        return;
+
+    scriptEngine->setCallbackParameter(onChannelsConfigured, 0, numInputs);
+    scriptEngine->setCallbackParameter(onChannelsConfigured, 1, numOutputs);
+
+    Result r = Result::ok();
+    scriptEngine->executeCallback(onChannelsConfigured, &r);
+
+    BACKEND_ONLY(if (!r.wasOk())
+        debugError(this, r.getErrorMessage()));
+}
+
+void JavascriptMidiProcessor::postCompileCallback()
+{
+#if USE_BACKEND
+    callOnChannelsConfigured(simulatedInputs, simulatedOutputs);
+#endif
+}
+
+void JavascriptMidiProcessor::prepareToPlay(double sampleRate, int samplesPerBlock)
+{
+    ScriptBaseMidiProcessor::prepareToPlay(sampleRate, samplesPerBlock);
+
+    if (auto* ap = dynamic_cast<AudioProcessor*>(
+            const_cast<MainController*>(getMainController_())))
+    {
+        callOnChannelsConfigured(
+            ap->getTotalNumInputChannels(),
+            ap->getTotalNumOutputChannels()
+        );
+    }
 }
 
 void JavascriptMidiProcessor::registerApiClasses()
